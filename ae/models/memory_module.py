@@ -89,6 +89,8 @@ class MemModule(nn.Module):
             y = y.permute(0, 3, 1, 2)
             att = att.view(s[0], s[2], s[3], self.mem_dim)
             att = att.permute(0, 3, 1, 2)
+            y = y.contiguous()
+            att = att.contiguous()
         elif l == 5:
             y = y.view(s[0], s[2], s[3], s[4], s[1])
             y = y.permute(0, 4, 1, 2, 3)  # (B, C, T, H, W)

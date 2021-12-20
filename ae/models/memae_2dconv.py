@@ -41,7 +41,7 @@ class AutoEncoderCov2DMem(nn.Module):
                       padding=1),  # (B, 128, 64, 64)
             nn.BatchNorm2d(self.feature_num),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(self.feature_num_x2,
+            nn.Conv2d(self.feature_num,
                       self.feature_num_x2,
                       kernel_size=3,
                       stride=2,

@@ -21,7 +21,7 @@ class ImageDataset(Dataset):
 
     def _load_files(self):
         files = []
-        for f in glob.glob(self.data_dir + f'/*.png'):
+        for f in glob.glob(self.data_dir + f'/*.jpg'):
             files.append(f)
         return files
 

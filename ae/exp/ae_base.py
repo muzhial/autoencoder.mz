@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding:utf-8 -*-
-# Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
-
 import os
 import random
 
@@ -28,10 +24,10 @@ class Exp(BaseExp):
         # ---------------- dataloader config ---------------- #
         # set worker to 4 for shorter dataloader init time
         self.data_num_workers = 4
-        self.input_size = (640, 640)  # (height, width)
+        self.input_size = (1280, 720)  # (w, h)
         # You can uncomment this line to specify a multiscale range
         # self.random_size = (14, 26)
-        self.data_dir = None
+        self.data_dir = '/dataset/mz/outside_data/fault_vid/imagedata/normal'
         # self.train_ann = "instances_train2017.json"
         # self.val_ann = "instances_val2017.json"
 
@@ -52,7 +48,7 @@ class Exp(BaseExp):
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]
 
         # -----------------  testing config ------------------ #
-        self.test_size = (640, 640)
+        self.test_size = (1280, 720)
 
     def get_model(self):
         from ae.models import AutoEncoderCov2DMem
@@ -96,7 +92,7 @@ class Exp(BaseExp):
         with wait_for_the_master(local_rank):
             dataset = ImageDataset(
                 data_dir=self.data_dir,
-                preproc=TrainTransform(self.chnum_in))
+                preproc=TrainTransform(self.chnum_in, self.input_size))
 
         self.dataset = dataset
 
@@ -129,26 +125,26 @@ class Exp(BaseExp):
 
         return train_loader
 
-    def random_resize(self, data_loader, epoch, rank, is_distributed):
-        tensor = torch.LongTensor(2).cuda()
+    # def random_resize(self, data_loader, epoch, rank, is_distributed):
+    #     tensor = torch.LongTensor(2).cuda()
 
-        if rank == 0:
-            size_factor = self.input_size[1] * 1.0 / self.input_size[0]
-            if not hasattr(self, 'random_size'):
-                min_size = int(self.input_size[0] / 32) - self.multiscale_range
-                max_size = int(self.input_size[0] / 32) + self.multiscale_range
-                self.random_size = (min_size, max_size)
-            size = random.randint(*self.random_size)
-            size = (int(32 * size), 32 * int(size * size_factor))
-            tensor[0] = size[0]
-            tensor[1] = size[1]
+    #     if rank == 0:
+    #         size_factor = self.input_size[1] * 1.0 / self.input_size[0]
+    #         if not hasattr(self, 'random_size'):
+    #             min_size = int(self.input_size[0] / 32) - self.multiscale_range
+    #             max_size = int(self.input_size[0] / 32) + self.multiscale_range
+    #             self.random_size = (min_size, max_size)
+    #         size = random.randint(*self.random_size)
+    #         size = (int(32 * size), 32 * int(size * size_factor))
+    #         tensor[0] = size[0]
+    #         tensor[1] = size[1]
 
-        if is_distributed:
-            dist.barrier()
-            dist.broadcast(tensor, 0)
+    #     if is_distributed:
+    #         dist.barrier()
+    #         dist.broadcast(tensor, 0)
 
-        input_size = (tensor[0].item(), tensor[1].item())
-        return input_size
+    #     input_size = (tensor[0].item(), tensor[1].item())
+    #     return input_size
 
     def get_optimizer(self, batch_size):
         if "optimizer" not in self.__dict__:
@@ -197,48 +193,51 @@ class Exp(BaseExp):
         )
         return scheduler
 
-    # def get_eval_loader(self, batch_size, is_distributed, testdev=False, legacy=False):
-    #     from yolox.data import COCODataset, ValTransform
+    def get_eval_loader(self, batch_size, is_distributed, testdev=False, legacy=False):
+        # from yolox.data import COCODataset, ValTransform
 
-    #     valdataset = COCODataset(
-    #         data_dir=self.data_dir,
-    #         json_file=self.val_ann if not testdev else "image_info_test-dev2017.json",
-    #         name="val2017" if not testdev else "test2017",
-    #         img_size=self.test_size,
-    #         preproc=ValTransform(legacy=legacy),
-    #     )
+        # valdataset = COCODataset(
+        #     data_dir=self.data_dir,
+        #     json_file=self.val_ann if not testdev else "image_info_test-dev2017.json",
+        #     name="val2017" if not testdev else "test2017",
+        #     img_size=self.test_size,
+        #     preproc=ValTransform(legacy=legacy),
+        # )
 
-    #     if is_distributed:
-    #         batch_size = batch_size // dist.get_world_size()
-    #         sampler = torch.utils.data.distributed.DistributedSampler(
-    #             valdataset, shuffle=False
-    #         )
-    #     else:
-    #         sampler = torch.utils.data.SequentialSampler(valdataset)
+        # if is_distributed:
+        #     batch_size = batch_size // dist.get_world_size()
+        #     sampler = torch.utils.data.distributed.DistributedSampler(
+        #         valdataset, shuffle=False
+        #     )
+        # else:
+        #     sampler = torch.utils.data.SequentialSampler(valdataset)
 
-    #     dataloader_kwargs = {
-    #         "num_workers": self.data_num_workers,
-    #         "pin_memory": True,
-    #         "sampler": sampler,
-    #     }
-    #     dataloader_kwargs["batch_size"] = batch_size
-    #     val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
+        # dataloader_kwargs = {
+        #     "num_workers": self.data_num_workers,
+        #     "pin_memory": True,
+        #     "sampler": sampler,
+        # }
+        # dataloader_kwargs["batch_size"] = batch_size
+        # val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
 
-    #     return val_loader
+        # return val_loader
+        pass
 
-    # def get_evaluator(self, batch_size, is_distributed, testdev=False, legacy=False):
-    #     from yolox.evaluators import COCOEvaluator
+    def get_evaluator(self, batch_size, is_distributed, testdev=False, legacy=False):
+        # from yolox.evaluators import COCOEvaluator
 
-    #     val_loader = self.get_eval_loader(batch_size, is_distributed, testdev, legacy)
-    #     evaluator = COCOEvaluator(
-    #         dataloader=val_loader,
-    #         img_size=self.test_size,
-    #         confthre=self.test_conf,
-    #         nmsthre=self.nmsthre,
-    #         num_classes=self.num_classes,
-    #         testdev=testdev,
-    #     )
-    #     return evaluator
+        # val_loader = self.get_eval_loader(batch_size, is_distributed, testdev, legacy)
+        # evaluator = COCOEvaluator(
+        #     dataloader=val_loader,
+        #     img_size=self.test_size,
+        #     confthre=self.test_conf,
+        #     nmsthre=self.nmsthre,
+        #     num_classes=self.num_classes,
+        #     testdev=testdev,
+        # )
+        # return evaluator
+        pass
 
-    # def eval(self, model, evaluator, is_distributed, half=False):
-    #     return evaluator.evaluate(model, is_distributed, half)
+    def eval(self, model, evaluator, is_distributed, half=False):
+        # return evaluator.evaluate(model, is_distributed, half)
+        pass

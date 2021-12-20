@@ -77,15 +77,16 @@ class Trainer:
             self.after_epoch()
 
     def train_in_iter(self):
-        for self.iter in range(self.max_iter):
+        # for self.iter in range(self.max_iter):
+        for self.iter, data in  enumerate(self.train_loader):
             self.before_iter()
-            self.train_one_iter()
+            self.train_one_iter(data)
             self.after_iter()
 
-    def train_one_iter(self):
+    def train_one_iter(self, inps):
         iter_start_time = time.time()
 
-        inps = self.prefetcher.next()
+        # inps = self.prefetcher.next()
         inps = inps.to(self.data_type)
         data_end_time = time.time()
 
@@ -136,7 +137,7 @@ class Trainer:
             cache_img=self.args.cache,
         )
         logger.info("init prefetcher, this might take one minute or less...")
-        self.prefetcher = DataPrefetcher(self.train_loader)
+        # self.prefetcher = DataPrefetcher(self.train_loader)
         # max_iter means iters per epoch
         self.max_iter = len(self.train_loader)
 
@@ -177,9 +178,9 @@ class Trainer:
     def after_epoch(self):
         self.save_ckpt(ckpt_name="latest")
 
-        # if (self.epoch + 1) % self.exp.eval_interval == 0:
-        #     all_reduce_norm(self.model)
-        #     self.evaluate_and_save_model()
+        if (self.epoch + 1) % self.exp.eval_interval == 0:
+            all_reduce_norm(self.model)
+            # self.evaluate_and_save_model()
 
     def before_iter(self):
         pass
@@ -202,7 +203,7 @@ class Trainer:
             )
             loss_meter = self.meter.get_filtered_meter("loss")
             loss_str = ", ".join(
-                ["{}: {:.1f}".format(k, v.latest) for k, v in loss_meter.items()]
+                ["{}: {:.6f}".format(k, v.latest) for k, v in loss_meter.items()]
             )
 
             time_meter = self.meter.get_filtered_meter("time")
