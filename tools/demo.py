@@ -2,6 +2,7 @@ import argparse
 import os
 import time
 
+from tqdm import tqdm
 from loguru import logger
 import cv2
 import numpy as np
@@ -10,6 +11,7 @@ import torch
 from ae.exp import get_exp
 from ae.utils import get_model_info
 from ae.data import TrainTransform, UnNormalize
+from vibe_cu import ViBe
 
 
 def make_parser():
@@ -82,8 +84,8 @@ class Predictor(object):
         recon_out = unorm_recon_out.cpu().numpy()
         recon_out = np.transpose(recon_out, (1, 2, 0))
         recon_out = (recon_out * 255).astype(np.uint8)
-        recon_frame = cv2.cvtColor(recon_out, cv2.COLOR_GRAY2BGR)
-        return recon_frame
+        # recon_frame = cv2.cvtColor(recon_out, cv2.COLOR_GRAY2BGR)
+        return recon_out
 
     def inference(self, image):
         image = self.train_transform(image)
@@ -97,7 +99,7 @@ class Predictor(object):
             outputs = self.model(img, return_loss=False)
 
         img = self.post_process(self.exp.chnum_in, outputs)
-        logger.info("Infer time: {:.4f}s".format(time.time() - t0))
+        # logger.info("Infer time: {:.4f}s".format(time.time() - t0))
         return img
 
 
@@ -108,8 +110,65 @@ def image_demo(predictor, image, save_dir):
     cv2.imwrite(save_dir, result)
 
 
-def vibe():
-    pass
+def vibe_demo(predictor, args, save_dir):
+    device = 'cuda:0' if args.device == 'gpu' else 'cpu'
+    vc = cv2.VideoCapture(args.path)
+    fw = vc.get(cv2.CAP_PROP_FRAME_WIDTH)
+    fh = vc.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    fps = vc.get(cv2.CAP_PROP_FPS)
+    f_num = vc.get(cv2.CAP_PROP_FRAME_COUNT)
+    logger.info(f'read video: {args.path}')
+    logger.info(f'frame size: {fw}, {fh}')
+    logger.info(f'frame rate: {fps}')
+    logger.info(f'frame count: {f_num}')
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out_video = cv2.VideoWriter(
+        save_dir, fourcc, fps, (int(fw), int(fh)))
+    recon_video = cv2.VideoWriter(
+        os.path.join(os.path.dirname(save_dir),
+                     'recon_' + os.path.basename(save_dir)),
+        fourcc, fps, (int(fw), int(fh)))
+
+    assert vc.isOpened(), 'video not opened'
+    init_process = False
+    frame_idx = 0
+    vibe = ViBe(
+        num_sam=20,
+        min_match=7,
+        radiu=15,
+        rand_sam=16,
+        device=device)
+
+    pbar = tqdm(total=int(f_num))
+    while True:
+        ret_val, frame = vc.read()
+        if ret_val:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            frame_result = predictor.inference(frame)
+            recon_error = np.abs(frame[..., None] - frame_result)
+
+            # save intermidate frame result
+            recon_frame = cv2.cvtColor(recon_error, cv2.COLOR_GRAY2BGR)
+            # cv2.imwrite(os.path.join(
+            #                 os.path.dirname(save_dir), f'{frame_idx:04d}.png'),
+            #             recon_frame)
+            recon_video.write(recon_frame)
+
+            frame_result = np.transpose(recon_error, (2, 0, 1))
+            frame_result = torch.from_numpy(frame_result).to(device)
+            if not init_process:
+                vibe.ProcessFirstFrame(frame_result)
+                init_process = True
+            else:
+                vibe.Update(frame_result)
+                seg_mat = vibe.getFGMask()
+                seg_mat = seg_mat.cpu().numpy().astype(np.uint8)
+                out_video.write(cv2.cvtColor(seg_mat, cv2.COLOR_GRAY2BGR))
+        else:
+            break
+        frame_idx += 1
+        pbar.update(1)
+    pbar.close()
 
 
 def main(exp, args):
@@ -137,7 +196,7 @@ def main(exp, args):
             model.half()  # to FP16
     model.eval()
     if args.ckpt is None:
-        ckpt_file = os.path.join(file_name, "latest_ckpt.pth")
+        ckpt_file = os.path.join(file_name, "300e_ckpt.pth")
     else:
         ckpt_file = args.ckpt
     logger.info("loading checkpoint")
@@ -153,11 +212,14 @@ def main(exp, args):
     if args.demo == 'image':
         image_demo(predictor,
                    args.path,
-                   os.path.join(vis_folder, 'test.png'))
+                   os.path.join(
+                       vis_folder, os.path.basename(args.path)))
     elif args.demo == 'video':
         pass
     elif args.demo == 'vibe':
-        vibe()
+        vibe_demo(predictor,
+                  args,
+                  os.path.join(vis_folder, os.path.basename(args.path)))
 
 
 if __name__ == '__main__':

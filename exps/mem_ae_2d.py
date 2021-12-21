@@ -8,4 +8,5 @@ class Exp(MyExp):
         super(Exp, self).__init__()
         self.print_interval = 25
         self.eval_interval = 20
+        self.max_epoch = 300
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]

@@ -16,11 +16,11 @@ def parse_args():
     parser.add_argument(
         '--src_dir',
         type=str,
-        default='/dataset/mz/outside_data/fault_vid/imagedata/normal2.mp4')
+        default='/dataset/mz/outside_data/fault_vid/imagedata/abnormal1.mp4')
     parser.add_argument(
         '--out_dir',
         type=str,
-        default='/dataset/mz/outside_data/fault_vid/imagedata/normal')
+        default='/dataset/mz/outside_data/fault_vid/imagedata/abnormal')
     parser.add_argument(
         '--num_worker',
         type=int,
