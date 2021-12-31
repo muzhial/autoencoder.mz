@@ -7,6 +7,8 @@ import torch.nn as nn
 from torch.optim import optimizer
 from torch.utils.data.dataloader import DataLoader
 
+from ae.models import vq_vae_2dconv
+
 from .base_exp import BaseExp
 
 
@@ -20,6 +22,7 @@ class Exp(BaseExp):
         self.feature_num = 128
         self.feature_num_2 = 96
         self.shrink_thres = 0.0025
+        self.mem_type = 'mem'  # ['mem' | 'vq']
 
         # ---------------- dataloader config ---------------- #
         # set worker to 4 for shorter dataloader init time
@@ -51,7 +54,7 @@ class Exp(BaseExp):
         self.test_size = (1280, 720)
 
     def get_model(self):
-        from ae.models import AutoEncoderCov2DMem
+        from ae.models import AutoEncoderCov2DMem, VQVaeCov2D
         from ae.utils import weights_init
 
         # def init_yolo(M):
@@ -61,11 +64,21 @@ class Exp(BaseExp):
         #             m.momentum = 0.03
 
         if getattr(self, "model", None) is None:
-            self.model = AutoEncoderCov2DMem(self.chnum_in,
-                                             self.mem_dim,
-                                             self.feature_num,
-                                             self.feature_num_2,
-                                             self.shrink_thres)
+            if self.mem_type == 'mem':
+                self.model = AutoEncoderCov2DMem(self.chnum_in,
+                                                 self.mem_dim,
+                                                 self.feature_num,
+                                                 self.feature_num_2,
+                                                 self.shrink_thres)
+            elif self.mem_type == 'vq':
+                self.model = VQVaeCov2D(self.chnum_in,
+                                        self.mem_dim,
+                                        self.n_embeddings,
+                                        self.feature_num,
+                                        self.feature_num_2,
+                                        self.commitment_cost,
+                                        self.decay,
+                                        self.epsilon)
 
         self.model.apply(weights_init)
         return self.model

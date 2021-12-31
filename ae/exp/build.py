@@ -18,7 +18,8 @@ def get_exp_by_name(exp_name):
 
     yolox_path = os.path.dirname(os.path.dirname(ae.__file__))
     filedict = {
-        "MemAE_2D": "mem_ae_2d.py"
+        "MemAE_2D": "mem_ae_2d.py",
+        "VQVAE_2D": "vq_vae_2d.py"
     }
     filename = filedict[exp_name]
     exp_path = os.path.join(yolox_path, "exps", filename)

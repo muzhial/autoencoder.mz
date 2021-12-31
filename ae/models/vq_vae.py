@@ -7,7 +7,12 @@ class VQEmbeddingEMA(nn.Module):
     """
     ref: https://github.com/Jackson-Kang/Pytorch-VAE-tutorial
     """
-    def __init__(self, n_embeddings, embedding_dim, commitment_cost=0.25, decay=0.999, epsilon=1e-5):
+    def __init__(self,
+                 n_embeddings,
+                 embedding_dim,
+                 commitment_cost=0.25,
+                 decay=0.999,
+                 epsilon=1e-5):
         super(VQEmbeddingEMA, self).__init__()
         self.commitment_cost = commitment_cost
         self.decay = decay
