@@ -16,3 +16,4 @@ class Exp(MyExp):
         self.commitment_cost = 0.25
         self.decay = 0.999
         self.epsilon = 1e-5
+        self.chnum_in = 1

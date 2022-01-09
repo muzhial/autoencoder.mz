@@ -30,7 +30,8 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, index):
         file_path = self.files[index]
-        frame = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+        # frame = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+        frame = cv2.imread(file_path)
         return self.preproc(frame)
 
 

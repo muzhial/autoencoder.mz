@@ -80,6 +80,7 @@ class Predictor(object):
             norm_mean, norm_std)
 
         unorm_recon_out = unnorm_transform(outputs['recon_result'])
+        # unorm_recon_out = outputs['recon_result']
         unorm_recon_out = unorm_recon_out.squeeze(0)
         recon_out = unorm_recon_out.cpu().numpy()
         recon_out = np.transpose(recon_out, (1, 2, 0))
@@ -148,12 +149,13 @@ def vibe_demo(predictor, args, save_dir):
             recon_error = np.abs(frame[..., None] - frame_result)
 
             # save intermidate frame result
-            recon_frame = cv2.cvtColor(recon_error, cv2.COLOR_GRAY2BGR)
+            recon_frame = cv2.cvtColor(frame_result[:, :, 0], cv2.COLOR_GRAY2BGR)
             # cv2.imwrite(os.path.join(
             #                 os.path.dirname(save_dir), f'{frame_idx:04d}.png'),
             #             recon_frame)
             recon_video.write(recon_frame)
 
+            # for ViBe
             frame_result = np.transpose(recon_error, (2, 0, 1))
             frame_result = torch.from_numpy(frame_result).to(device)
             if not init_process:
